@@ -44,19 +44,19 @@ describe('user profile store', () => {
         data: {
           token: 'secret',
           username: 'zing',
-          serverUrl: 'wss://z.zosen.link'
+          serverUrl: 'wss://z-tools.top'
         }
       })
       .mockReturnValueOnce({
         data: {
           uid: 'zing',
           nickname: 'Zing Zhang',
-          avatarUrl: 'https://z.zosen.link/avatar/zing.png'
+          avatarUrl: 'https://z-tools.top/avatar/zing.png'
         }
       })
 
     expect(getCurrentUserInfo()).toEqual({
-      avatar: 'https://z.zosen.link/avatar/zing.png',
+      avatar: 'https://z-tools.top/avatar/zing.png',
       nickname: 'Zing Zhang',
       uid: 'zing'
     })
@@ -69,7 +69,7 @@ describe('user profile store', () => {
         data: {
           token: 'secret',
           username: 'new-user',
-          serverUrl: 'wss://z.zosen.link'
+          serverUrl: 'wss://z-tools.top'
         }
       })
       .mockReturnValueOnce(null)
@@ -87,7 +87,7 @@ describe('user profile store', () => {
     cacheUserProfile({
       uid: 'zing',
       nickname: 'New nickname',
-      avatarUrl: 'https://z.zosen.link/avatar/new.png'
+      avatarUrl: 'https://z-tools.top/avatar/new.png'
     })
 
     expect(lmdbPut).toHaveBeenCalledWith({
@@ -96,7 +96,7 @@ describe('user profile store', () => {
       data: {
         uid: 'zing',
         nickname: 'New nickname',
-        avatarUrl: 'https://z.zosen.link/avatar/new.png',
+        avatarUrl: 'https://z-tools.top/avatar/new.png',
         updatedAt: expect.any(Number)
       }
     })

@@ -7,7 +7,7 @@ import { resolve } from 'path'
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8'))
 const targetElectronVersion = packageJson.devDependencies.electron
 const officialSyncServerUrl =
-  process.env.ZTOOLS_OFFICIAL_SYNC_SERVER_URL?.trim() || 'https://z.zosen.link'
+  process.env.ZTOOLS_OFFICIAL_SYNC_SERVER_URL?.trim() || 'https://z-tools.top'
 
 const sharedDefines = {
   __ZTOOLS_OFFICIAL_SYNC_SERVER_URL__: JSON.stringify(officialSyncServerUrl)

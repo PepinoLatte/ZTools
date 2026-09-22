@@ -31,7 +31,7 @@ describe('requestPluginMarket', () => {
       _id: 'AUTH/official-account',
       _rev: '1-test',
       data: {
-        serverUrl: 'wss://z.zosen.link',
+        serverUrl: 'wss://z-tools.top',
         token: 'expired-token',
         refreshToken: 'expired-refresh-token',
         username: 'official-user'
@@ -74,7 +74,7 @@ describe('requestPluginMarket', () => {
       _id: 'AUTH/official-account',
       _rev: '1-test',
       data: {
-        serverUrl: 'wss://z.zosen.link',
+        serverUrl: 'wss://z-tools.top',
         token: 'expired-token',
         refreshToken: 'expired-refresh-token',
         username: 'official-user'

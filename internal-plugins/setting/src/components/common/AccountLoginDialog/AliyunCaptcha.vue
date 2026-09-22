@@ -6,6 +6,7 @@
 </template>
 
 <script setup lang="ts">
+import { OFFICIAL_SYNC_SERVER_URL } from '@shared/syncServerUrl'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const captchaScriptUrl = 'https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js'
@@ -68,7 +69,7 @@ const props = withDefaults(
     serverUrl?: string
   }>(),
   {
-    serverUrl: 'wss://z.zosen.link'
+    serverUrl: OFFICIAL_SYNC_SERVER_URL
   }
 )
 

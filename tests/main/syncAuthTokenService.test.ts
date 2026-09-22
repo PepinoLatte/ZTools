@@ -218,7 +218,7 @@ function createStoredDoc(token: string, refreshToken: string, username: string):
     _id: 'AUTH/test-session',
     _rev: '1-test',
     data: {
-      serverUrl: 'wss://z.zosen.link',
+      serverUrl: 'wss://z-tools.top',
       username,
       token,
       refreshToken

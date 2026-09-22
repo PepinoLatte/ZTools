@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   isOfficialSyncServerUrl,
+  LEGACY_OFFICIAL_SYNC_SERVER_URLS,
   normalizeSyncServerUrl,
   OFFICIAL_SYNC_SERVER_URL,
   OFFICIAL_SERVER_HTTP_URL,
@@ -14,8 +15,8 @@ describe('syncServerUrl', () => {
   })
 
   it('uses HTTPS directly and derives only the sync transport address', () => {
-    expect(OFFICIAL_SERVER_HTTP_URL).toBe('https://z.zosen.link')
-    expect(OFFICIAL_SYNC_SERVER_URL).toBe('wss://z.zosen.link')
+    expect(OFFICIAL_SERVER_HTTP_URL).toBe('https://z-tools.top')
+    expect(OFFICIAL_SYNC_SERVER_URL).toBe('wss://z-tools.top')
   })
 
   it.each([
@@ -30,7 +31,7 @@ describe('syncServerUrl', () => {
   })
 
   it.each([
-    [' https://z.zosen.link/ ', 'https://z.zosen.link'],
+    [' https://z-tools.top/ ', 'https://z-tools.top'],
     ['http://127.0.0.1:23517', 'http://127.0.0.1:23517'],
     ['http://localhost:23517', 'http://localhost:23517'],
     ['http://[::1]:23517', 'http://[::1]:23517'],
@@ -48,8 +49,8 @@ describe('syncServerUrl', () => {
     ['https://user:secret@sync.example.com', '不能包含账号或密码'],
     ['https://sync.example.com/api', '暂不支持子路径'],
     ['https://sync.example.com/?tenant=a', '不能包含查询参数'],
-    ['z.zosen.link/api', '格式不正确'],
-    ['https://z.zosen.link#anchor', '不能包含查询参数'],
+    ['z-tools.top/api', '格式不正确'],
+    ['https://z-tools.top#anchor', '不能包含查询参数'],
     ['127.0.0.1:bad', '格式不正确']
   ])('rejects invalid server address %s', (input, message) => {
     expect(() => normalizeSyncServerUrl(input)).toThrow(message)
@@ -57,9 +58,11 @@ describe('syncServerUrl', () => {
   })
 
   it('recognizes the current and trusted legacy official service addresses', () => {
-    expect(isOfficialSyncServerUrl('https://z.zosen.link/')).toBe(true)
-    expect(isOfficialSyncServerUrl('z.zosen.link')).toBe(false)
     expect(isOfficialSyncServerUrl('https://z-tools.top/')).toBe(true)
+    expect(
+      isOfficialSyncServerUrl(`${LEGACY_OFFICIAL_SYNC_SERVER_URLS[0].replace('wss:', 'https:')}/`)
+    ).toBe(true)
+    expect(isOfficialSyncServerUrl('z-tools.top')).toBe(false)
     expect(isOfficialSyncServerUrl(OFFICIAL_SYNC_SERVER_URL)).toBe(true)
     expect(isOfficialSyncServerUrl('https://private.example.com')).toBe(false)
   })
@@ -72,10 +75,10 @@ describe('syncServerUrl', () => {
     expect(local.OFFICIAL_SYNC_SERVER_URL).toBe('ws://127.0.0.1:23517')
     expect(local.isOfficialSyncServerUrl('ws://127.0.0.1:23517')).toBe(true)
     expect(local.isOfficialSyncServerUrl('http://127.0.0.1:23517')).toBe(true)
-    expect(local.isOfficialSyncServerUrl('z.zosen.link')).toBe(false)
+    expect(local.isOfficialSyncServerUrl('z-tools.top')).toBe(false)
   })
 
-  it.each(['z.zosen.link', '127.0.0.1:23517', 'ws://localhost:23517', 'wss://z.zosen.link'])(
+  it.each(['z-tools.top', '127.0.0.1:23517', 'ws://localhost:23517', 'wss://z-tools.top'])(
     'rejects non-HTTP build configuration %s instead of guessing its protocol',
     async (input) => {
       expect(() => normalizeHttpServerUrl(input)).toThrow()

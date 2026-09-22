@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LEGACY_OFFICIAL_SYNC_SERVER_URLS } from '../../src/shared/syncServerUrl'
 
 const mocks = vi.hoisted(() => ({
   docs: new Map<string, any>(),
@@ -27,9 +28,42 @@ vi.mock('../../src/main/core/account/officialAccountService', () => ({
 }))
 
 import {
+  loadSyncProfile,
   migrateLegacySyncConfig,
   saveSyncProfile
 } from '../../src/main/core/sync/syncProfileService'
+
+describe('loadSyncProfile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.docs.clear()
+  })
+
+  it('uses the official provider to normalize a saved URL while keeping the existing sync state', async () => {
+    mocks.docs.set('SYNC/profile', {
+      _id: 'SYNC/profile',
+      _rev: '1-test',
+      data: {
+        provider: 'official',
+        enabled: true,
+        serverUrl: 'wss://previous-official.example.com',
+        syncInterval: 60,
+        lastSyncTime: 123,
+        deviceId: 'device-1'
+      }
+    })
+
+    await expect(loadSyncProfile()).resolves.toEqual({
+      provider: 'official',
+      enabled: true,
+      serverUrl: 'wss://z-tools.top',
+      syncInterval: 60,
+      lastSyncTime: 123,
+      deviceId: 'device-1'
+    })
+    expect(mocks.put).not.toHaveBeenCalled()
+  })
+})
 
 describe('migrateLegacySyncConfig', () => {
   beforeEach(() => {
@@ -48,7 +82,7 @@ describe('migrateLegacySyncConfig', () => {
       _rev: '1-test',
       data: {
         enabled: true,
-        serverUrl: 'https://z-tools.top/',
+        serverUrl: `${LEGACY_OFFICIAL_SYNC_SERVER_URLS[0].replace('wss:', 'https:')}/`,
         username: 'official-user',
         token: 'official-token',
         refreshToken: 'official-refresh-token',
@@ -70,7 +104,7 @@ describe('migrateLegacySyncConfig', () => {
     expect(mocks.docs.get('SYNC/profile')?.data).toEqual({
       provider: 'official',
       enabled: true,
-      serverUrl: 'wss://z.zosen.link',
+      serverUrl: 'wss://z-tools.top',
       syncInterval: 60,
       lastSyncTime: 123,
       deviceId: 'device-1'
@@ -129,7 +163,7 @@ describe('saveSyncProfile', () => {
       data: {
         provider: 'official',
         enabled: true,
-        serverUrl: 'wss://z.zosen.link',
+        serverUrl: 'wss://z-tools.top',
         syncInterval: 30,
         lastSyncTime: 123
       }

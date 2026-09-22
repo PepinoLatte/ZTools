@@ -4,7 +4,7 @@ import UnoCSS from 'unocss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
 const officialSyncServerUrl =
-  process.env.ZTOOLS_OFFICIAL_SYNC_SERVER_URL?.trim() || 'https://z.zosen.link'
+  process.env.ZTOOLS_OFFICIAL_SYNC_SERVER_URL?.trim() || 'https://z-tools.top'
 
 // https://vitejs.dev/config/
 export default defineConfig({

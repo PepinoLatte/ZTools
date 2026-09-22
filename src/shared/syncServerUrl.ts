@@ -3,11 +3,12 @@ declare const __ZTOOLS_OFFICIAL_SYNC_SERVER_URL__: string
 // 官方配置只接受 HTTP(S)；API 直接使用该地址，仅同步侧派生 WebSocket 地址。
 const configuredServerUrl =
   typeof __ZTOOLS_OFFICIAL_SYNC_SERVER_URL__ === 'string'
-    ? __ZTOOLS_OFFICIAL_SYNC_SERVER_URL__.trim() || 'https://z.zosen.link'
-    : 'https://z.zosen.link'
+    ? __ZTOOLS_OFFICIAL_SYNC_SERVER_URL__.trim() || 'https://z-tools.top'
+    : 'https://z-tools.top'
 export const OFFICIAL_SERVER_HTTP_URL = normalizeHttpServerUrl(configuredServerUrl)
 export const OFFICIAL_SYNC_SERVER_URL = normalizeSyncServerUrl(OFFICIAL_SERVER_HTTP_URL)
-export const LEGACY_OFFICIAL_SYNC_SERVER_URLS = ['wss://z-tools.top'] as const
+// 3.2.0 使用过该官方域名，保留信任以便原 token 无感迁回主域名。
+export const LEGACY_OFFICIAL_SYNC_SERVER_URLS = ['wss://z.zosen.link'] as const
 
 const TRUSTED_OFFICIAL_SYNC_SERVER_URLS = new Set<string>([
   OFFICIAL_SYNC_SERVER_URL,

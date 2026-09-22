@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { LEGACY_OFFICIAL_SYNC_SERVER_URLS } from '../../src/shared/syncServerUrl'
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
@@ -40,7 +41,7 @@ describe('official account server migration', () => {
       _id: OFFICIAL_ACCOUNT_DOCUMENT_ID,
       _rev: '1-test',
       data: {
-        serverUrl: 'wss://z-tools.top',
+        serverUrl: LEGACY_OFFICIAL_SYNC_SERVER_URLS[0],
         username: 'legacy-user',
         token: 'legacy-access-token',
         refreshToken: 'legacy-refresh-token'
@@ -58,7 +59,7 @@ describe('official account server migration', () => {
     const session = await loadOfficialAccountSession()
 
     expect(session).toEqual({
-      serverUrl: 'wss://z.zosen.link',
+      serverUrl: 'wss://z-tools.top',
       username: 'legacy-user',
       token: 'legacy-access-token',
       refreshToken: 'legacy-refresh-token'
@@ -69,11 +70,18 @@ describe('official account server migration', () => {
 
   it('keeps legacy users logged in for synchronous readers before persistence runs', () => {
     expect(loadOfficialAccountSessionSync()).toEqual({
-      serverUrl: 'wss://z.zosen.link',
+      serverUrl: 'wss://z-tools.top',
       username: 'legacy-user',
       token: 'legacy-access-token',
       refreshToken: 'legacy-refresh-token'
     })
+    expect(mocks.put).not.toHaveBeenCalled()
+  })
+
+  it('keeps users already stored on the restored domain without rewriting their tokens', async () => {
+    storedDoc.data.serverUrl = 'wss://z-tools.top'
+
+    await expect(loadOfficialAccountSession()).resolves.toEqual(storedDoc.data)
     expect(mocks.put).not.toHaveBeenCalled()
   })
 
