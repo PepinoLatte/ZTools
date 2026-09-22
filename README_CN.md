@@ -16,30 +16,6 @@ _uTools 的开源实现 | 支持 macOS 和 Windows_
 
 </div>
 
-## ❤️ 赞助商
-
-> [想出现在这里？](mailto:8589561@qq.com)
-
-<details open>
-<summary>点击折叠</summary>
-
-<table>
-  <tr>
-    <td width="240" align="center">
-      <a href="https://go.apimart.ai/gh-ztools">
-        <img src="./.github/assets/sponsors/apimart.png" alt="APIMart" width="220">
-      </a>
-    </td>
-    <td>
-      感谢 <a href="https://go.apimart.ai/gh-ztools">APIMart</a>  赞助了本项目！APIMart 是专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 $0.006/张，1 美元可出图 160+ 张。图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码。按量付费、无月费，通过此<a href="https://go.apimart.ai/gh-ztools">注册链接</a>注册即可开用。
-    </td>
-  </tr>
-</table>
-
-</details>
-
----
-
 ## ✨ 特性
 
 - 🚀 **快速启动** - 拼音搜索、正则匹配、历史记录、固定应用

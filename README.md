@@ -16,30 +16,6 @@ English | [简体中文](./README_CN.md)
 
 </div>
 
-## ❤️ Sponsors
-
-> [Want to appear here?](mailto:8589561@qq.com)
-
-<details open>
-<summary>Click to collapse</summary>
-
-<table>
-  <tr>
-    <td width="240" align="center">
-      <a href="https://go.apimart.ai/gh-ztools">
-        <img src="./.github/assets/sponsors/apimart.png" alt="APIMart" width="220">
-      </a>
-    </td>
-    <td>
-      Thanks to <a href="https://go.apimart.ai/gh-ztools">APIMart</a> for sponsoring this project! APIMart is a low-cost API platform for AI image &amp; video generation — GPT-Image-2 from $0.006/image, 160+ images per dollar. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch tens of thousands of images without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee — <a href="https://go.apimart.ai/gh-ztools">sign up here</a> to get started.
-    </td>
-  </tr>
-</table>
-
-</details>
-
----
-
 ## ✨ Features
 
 - 🚀 **Quick Launch** - Pinyin search, regex matching, history tracking, pinned apps
