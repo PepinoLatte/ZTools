@@ -62,16 +62,56 @@ async function main() {
   fs.rmSync(WORK, { recursive: true, force: true })
   fs.mkdirSync(WORK, { recursive: true })
   const asar = await import(pathToFileURL(TOOL_LIB).href)
-  console.log('解包当前 app.asar ...')
-  await asar.extractAll(APP_ASAR, path.join(WORK, 'app'))
+  console.log('提取当前 app.asar 内容 ...')
+  // 不用 extractAll：asar 头部可能残留指向已更新磁盘文件的 unpacked 旧条目（内置插件
+  // assets 带内容哈希，会随部署变化），整体解包会 ENOENT。逐条目处理：
+  //   unpacked 条目 → 以磁盘 app.asar.unpacked 里的文件为准（运行时读的就是它）；
+  //   internal-plugins 旧条目 → 直接跳过（官方包不含它，加载器只读 unpacked 目录）；
+  //   其余条目 → 从 asar 提取。
+  const appTree = path.join(WORK, 'app')
+  const header = (await asar.getRawHeader(APP_ASAR, true)).header
+  const copyEntry = async (rel) => {
+    const dest = path.join(appTree, rel.split('/').join(path.sep))
+    if (fs.existsSync(dest)) return
+    // 该 asar 库在 Windows 上按 path.sep 解析路径，必须用反斜杠
+    const buf = await asar.extractFile(APP_ASAR, rel.split('/').join(path.sep))
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.writeFileSync(dest, buf)
+  }
+  const walkExtract = async (node, prefix) => {
+    for (const [name, child] of Object.entries(node.files || {})) {
+      const rel = prefix ? `${prefix}/${name}` : name
+      if (child.files) {
+        await walkExtract(child, rel)
+      } else if (child.unpacked) {
+        if (rel.startsWith('internal-plugins/')) continue
+        const disk = path.join(RES_DIR, 'app.asar.unpacked', rel.split('/').join(path.sep))
+        if (!fs.existsSync(disk)) continue
+        const dest = path.join(appTree, rel.split('/').join(path.sep))
+        fs.mkdirSync(path.dirname(dest), { recursive: true })
+        fs.copyFileSync(disk, dest)
+      } else {
+        await copyEntry(rel)
+      }
+    }
+  }
+  await walkExtract(header, '')
+  // 写入主进程入口使用的 package.json（与 asar 头部一致）
+  if (!fs.existsSync(path.join(appTree, 'package.json'))) {
+    const pkg = await asar.extractFile(APP_ASAR, 'package.json')
+    fs.writeFileSync(path.join(appTree, 'package.json'), pkg)
+  }
   fs.rmSync(path.join(WORK, 'app', 'out'), { recursive: true, force: true })
   fs.cpSync(path.join(REPO, 'out'), path.join(WORK, 'app', 'out'), { recursive: true })
+  // internal-plugins 不打进 asar（与官方包一致）：生产加载器只读 app.asar.unpacked 下的
+  // 内置插件目录。若保留旧条目，其 unpacked 引用会随磁盘 assets 更新而失效。
+  fs.rmSync(path.join(WORK, 'app', 'internal-plugins'), { recursive: true, force: true })
 
   // 5) 重打包 + 一致性校验
   console.log('重新打包 ...')
   const outAsar = path.join(WORK, 'app-new.asar')
   await asar.createPackageWithOptions(path.join(WORK, 'app'), outAsar, { unpack: GLOBS })
-  const header = (await asar.getRawHeader(outAsar, true)).header
+  const newHeader = (await asar.getRawHeader(outAsar, true)).header
   const missing = []
   const walk = (node, prefix) => {
     for (const [name, child] of Object.entries(node.files || {})) {
@@ -83,7 +123,7 @@ async function main() {
       }
     }
   }
-  walk(header, '')
+  walk(newHeader, '')
   if (missing.length > 0) {
     console.error('一致性校验失败（', missing.length, '个 unpacked 条目缺磁盘文件），原包未动。')
     missing.slice(0, 5).forEach((m) => console.error('  MISSING:', m))
