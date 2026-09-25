@@ -1509,8 +1509,46 @@ async function initializeSettings(): Promise<void> {
     // 平台会影响快捷键默认值和平台专属选项，需在设置表单展示前确定。
     await getPlatformInfo()
     await loadSettings()
+    await loadBatchManageSettings()
   } finally {
     settingsLoaded.value = true
+  }
+}
+
+// [ZT-Enhance] 插件批量管理：全局开关存储于宿主库 batch-plugin-manage 文档
+const BATCH_MANAGE_KEY = 'batch-plugin-manage'
+const batchAutoStartAll = ref(false)
+const batchOutKillAll = ref(false)
+const batchAutoDetachAll = ref(true)
+
+async function loadBatchManageSettings(): Promise<void> {
+  try {
+    const cfg = await window.ztools.internal.dbGet(BATCH_MANAGE_KEY)
+    batchAutoStartAll.value = cfg?.autoStartAll === true
+    batchOutKillAll.value = cfg?.outKillAll === true
+    batchAutoDetachAll.value = cfg?.autoDetachAll !== false
+  } catch (err) {
+    console.error('加载插件批量管理配置失败:', err)
+  }
+}
+
+async function handleBatchManageChange(): Promise<void> {
+  try {
+    const current = (await window.ztools.internal.dbGet(BATCH_MANAGE_KEY)) || {}
+    await window.ztools.internal.dbPut(BATCH_MANAGE_KEY, {
+      ...current,
+      autoStartAll: batchAutoStartAll.value,
+      outKillAll: batchOutKillAll.value,
+      autoDetachAll: batchAutoDetachAll.value
+    })
+    if (batchAutoStartAll.value) {
+      info('跟随启动已开启，重启应用后生效')
+    } else {
+      success('设置已保存')
+    }
+  } catch (err) {
+    error('保存插件批量管理配置失败')
+    console.error('保存插件批量管理配置失败:', err)
   }
 }
 
@@ -1641,6 +1679,67 @@ onUnmounted(() => {
               type="checkbox"
               aria-label="全屏模式下忽略热键"
               @change="handleIgnoreHotkeysOnFullscreenChange"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== [ZT-Enhance] 插件批量管理 ==================== -->
+    <div class="setting-group">
+      <h3 class="setting-group-title">插件批量管理</h3>
+
+      <div class="setting-item">
+        <div class="setting-label">
+          <span>跟随启动</span>
+          <span class="setting-desc"
+            >ZTools 启动时自动后台加载全部已安装插件（开启后需重启应用生效）</span
+          >
+        </div>
+        <div class="setting-control">
+          <label class="toggle">
+            <input
+              v-model="batchAutoStartAll"
+              type="checkbox"
+              aria-label="插件跟随启动"
+              @change="handleBatchManageChange"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">
+          <span>关闭后自动销毁</span>
+          <span class="setting-desc">插件退出主面板后立即结束其进程并销毁视图，释放资源</span>
+        </div>
+        <div class="setting-control">
+          <label class="toggle">
+            <input
+              v-model="batchOutKillAll"
+              type="checkbox"
+              aria-label="插件关闭后自动销毁"
+              @change="handleBatchManageChange"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-label">
+          <span>自动分离窗口</span>
+          <span class="setting-desc">点击插件时直接在独立窗口中打开（默认开启）</span>
+        </div>
+        <div class="setting-control">
+          <label class="toggle">
+            <input
+              v-model="batchAutoDetachAll"
+              type="checkbox"
+              aria-label="插件自动分离窗口"
+              @change="handleBatchManageChange"
             />
             <span class="toggle-slider"></span>
           </label>
