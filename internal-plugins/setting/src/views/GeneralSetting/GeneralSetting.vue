@@ -13,7 +13,7 @@ import {
   type ThemeType,
   type WindowPositionStrategy
 } from '@/constants'
-import { BaseDialog, Dropdown, HotkeyInput, Slider, useToast } from '@/components'
+import { AdaptiveIcon, BaseDialog, Dropdown, HotkeyInput, Slider, useToast } from '@/components'
 import { applyCustomColor, applyPrimaryColor } from '@/utils'
 import {
   DEFAULT_SEARCH_WALLPAPER_BLUR,
@@ -1559,17 +1559,42 @@ const batchSelections = ref<Record<BatchBehavior['listKey'], string[]>>({
   'out-kill-plugin': [],
   'auto-detach-plugin': []
 })
-const installedPlugins = ref<Array<{ name: string; title: string }>>([])
+const installedPlugins = ref<
+  Array<{ name: string; title: string; logo: string; description: string }>
+>([])
 
 // 选择弹窗状态
 const batchDialogVisible = ref(false)
 const activeBehaviorKey = ref<BatchBehavior['key'] | null>(null)
 const batchDialogGlobal = ref(false)
 const batchDialogChecked = ref<string[]>([])
+const batchDialogSearch = ref('')
 
 const activeBehavior = computed(
   () => batchBehaviors.find((b) => b.key === activeBehaviorKey.value) ?? null
 )
+
+const filteredBatchPlugins = computed(() => {
+  const query = batchDialogSearch.value.trim().toLowerCase()
+  if (!query) return installedPlugins.value
+  return installedPlugins.value.filter(
+    (p) =>
+      p.title.toLowerCase().includes(query) ||
+      p.name.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query)
+  )
+})
+
+function isPluginChecked(p: { name: string }): boolean {
+  return batchDialogGlobal.value || batchDialogChecked.value.includes(p.name)
+}
+
+function jumpToMarket(p: { name: string }): void {
+  // 通过 sessionStorage 把目标插件名交接给市场页（其列表就绪后会自动打开详情）
+  sessionStorage.setItem('ZT_MARKET_DETAIL', p.name)
+  batchDialogVisible.value = false
+  router.push('/market')
+}
 
 function behaviorSummary(key: BatchBehavior['key']): string {
   if (batchFlags.value[key]) return '全部（含新装）'
@@ -1608,7 +1633,12 @@ async function openBatchDialog(key: BatchBehavior['key']): Promise<void> {
       const plugins = await window.ztools.internal.dbGet('plugins')
       installedPlugins.value = (Array.isArray(plugins) ? plugins : [])
         .filter((p) => p && typeof p.name === 'string')
-        .map((p) => ({ name: p.name as string, title: (p.title as string) || (p.name as string) }))
+        .map((p) => ({
+          name: p.name as string,
+          title: (p.title as string) || (p.name as string),
+          logo: (p.logo as string) || '',
+          description: (p.description as string) || ''
+        }))
         .sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'))
     } catch (err) {
       console.error('读取插件列表失败:', err)
@@ -1628,6 +1658,8 @@ function onBatchGlobalChange(): void {
 }
 
 function toggleBatchPlugin(name: string, checked: boolean): void {
+  // 全局模式下列表仅作展示，不允许逐个改动
+  if (batchDialogGlobal.value) return
   if (checked) {
     if (!batchDialogChecked.value.includes(name)) batchDialogChecked.value.push(name)
   } else {
@@ -1840,6 +1872,12 @@ onUnmounted(() => {
           <span>应用到全部插件（含未来新装的插件）</span>
         </label>
         <div class="zt-bm-toolbar">
+          <input
+            v-model="batchDialogSearch"
+            type="text"
+            class="zt-bm-search"
+            placeholder="搜索插件…"
+          />
           <button
             type="button"
             class="zt-bm-mini-btn"
@@ -1857,24 +1895,37 @@ onUnmounted(() => {
             清空
           </button>
           <span class="zt-bm-count"
-            >已选 {{ batchDialogChecked.length }} / {{ installedPlugins.length }}</span
+            >{{ batchDialogChecked.length }}/{{ installedPlugins.length }}</span
           >
         </div>
         <div class="zt-bm-plugin-list">
-          <label
-            v-for="p in installedPlugins"
+          <div
+            v-for="p in filteredBatchPlugins"
             :key="p.name"
             class="zt-bm-plugin-item"
-            :class="{ 'zt-bm-plugin-item-disabled': batchDialogGlobal }"
+            :class="{
+              'zt-bm-item-checked': isPluginChecked(p),
+              'zt-bm-item-muted': batchDialogGlobal
+            }"
+            @click="toggleBatchPlugin(p.name, !isPluginChecked(p))"
           >
-            <input
-              type="checkbox"
-              :checked="batchDialogGlobal || batchDialogChecked.includes(p.name)"
-              :disabled="batchDialogGlobal"
-              @change="toggleBatchPlugin(p.name, ($event.target as HTMLInputElement).checked)"
-            />
-            <span class="zt-bm-plugin-title">{{ p.title }}</span>
-          </label>
+            <span class="zt-bm-check"><span class="zt-bm-check-mark"></span></span>
+            <AdaptiveIcon v-if="p.logo" :src="p.logo" class="zt-bm-icon" alt="" draggable="false" />
+            <span v-else class="zt-bm-icon zt-bm-icon-fallback">{{ p.title.slice(0, 1) }}</span>
+            <span class="zt-bm-plugin-info">
+              <span class="zt-bm-plugin-title">{{ p.title }}</span>
+              <span v-if="p.description" class="zt-bm-plugin-desc">{{ p.description }}</span>
+            </span>
+            <button
+              type="button"
+              class="zt-bm-market-btn"
+              title="在插件市场中打开该插件"
+              @click.stop="jumpToMarket(p)"
+            >
+              市场
+            </button>
+          </div>
+          <div v-if="filteredBatchPlugins.length === 0" class="zt-bm-empty">没有匹配的插件</div>
         </div>
       </div>
       <template #footer>
@@ -3226,9 +3277,18 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 8px 10px;
   font-size: 13px;
   font-weight: 500;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
   cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.zt-bm-global-row:hover {
+  border-color: var(--highlight-color);
 }
 
 .zt-bm-toolbar {
@@ -3237,14 +3297,32 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.zt-bm-mini-btn {
-  padding: 3px 10px;
+.zt-bm-search {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 10px;
   font-size: 12px;
   color: var(--text-color);
   background: var(--control-bg);
   border: 1px solid var(--control-border);
-  border-radius: 5px;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.zt-bm-search:focus {
+  border-color: var(--highlight-color);
+}
+
+.zt-bm-mini-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-color);
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     border-color 0.2s,
     background 0.2s;
@@ -3260,47 +3338,153 @@ onUnmounted(() => {
 }
 
 .zt-bm-count {
-  margin-left: auto;
+  flex: none;
   font-size: 12px;
   opacity: 0.65;
 }
 
 .zt-bm-plugin-list {
-  max-height: 300px;
+  max-height: 320px;
   overflow-y: auto;
   border: 1px solid var(--control-border);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .zt-bm-plugin-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  font-size: 13px;
+  gap: 10px;
+  padding: 8px 12px;
   cursor: pointer;
+  user-select: none;
   transition: background 0.15s;
-}
-
-.zt-bm-plugin-item:hover:not(.zt-bm-plugin-item-disabled) {
-  background: var(--control-bg);
 }
 
 .zt-bm-plugin-item + .zt-bm-plugin-item {
   border-top: 1px solid var(--divider-color);
 }
 
-.zt-bm-plugin-item-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.zt-bm-plugin-item:hover {
+  background: var(--control-bg);
+}
+
+.zt-bm-item-checked {
+  background: color-mix(in srgb, var(--highlight-color) 10%, transparent);
+}
+
+.zt-bm-item-checked:hover {
+  background: color-mix(in srgb, var(--highlight-color) 14%, transparent);
+}
+
+.zt-bm-item-muted {
+  opacity: 0.55;
+}
+
+.zt-bm-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--control-border);
+  border-radius: 5px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.zt-bm-item-checked .zt-bm-check {
+  background: var(--highlight-color);
+  border-color: var(--highlight-color);
+}
+
+.zt-bm-check-mark {
+  width: 4px;
+  height: 8px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.15s;
+}
+
+.zt-bm-item-checked .zt-bm-check-mark {
+  transform: rotate(45deg) scale(1);
+}
+
+.zt-bm-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.zt-bm-icon-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--highlight-color), var(--primary-color, #34d399));
+}
+
+.zt-bm-plugin-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .zt-bm-plugin-title {
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.zt-bm-plugin-desc {
+  overflow: hidden;
+  font-size: 11px;
+  opacity: 0.55;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zt-bm-market-btn {
+  flex: none;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--highlight-color);
+  background: transparent;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  opacity: 0.6;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.zt-bm-plugin-item:hover .zt-bm-market-btn {
+  opacity: 1;
+  border-color: var(--highlight-color);
+}
+
+.zt-bm-market-btn:hover {
+  background: color-mix(in srgb, var(--highlight-color) 14%, transparent);
+}
+
+.zt-bm-empty {
+  padding: 24px 0;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0.5;
 }
 
 .zt-bm-footer {
