@@ -95,12 +95,24 @@ async function main() {
   fs.copyFileSync(outAsar, APP_ASAR)
 
   // 7) 同步设置插件 dist 到 unpacked 目录
+  //    先清空旧 assets（文件名带内容哈希，旧文件会残留），防止缓存旧页面时加载到过期资源
   if (fs.existsSync(SETTING_DIST) && fs.existsSync(SETTING_INSTALLED)) {
+    const installedAssets = path.join(SETTING_INSTALLED, 'assets')
+    if (fs.existsSync(installedAssets)) fs.rmSync(installedAssets, { recursive: true, force: true })
     fs.cpSync(SETTING_DIST, SETTING_INSTALLED, { recursive: true })
-    console.log('设置插件 dist 已同步')
+    console.log('设置插件 dist 已同步（旧 assets 已清理）')
   }
 
-  // 8) 重启
+  // 8) 清除设置插件分区的网页缓存。
+  //    插件页面经 file:// 加载，Chromium 启发式缓存可能长期不重新验证 index.html，
+  //    导致部署后界面仍是旧版本。保留 Local Storage / Network 等用户数据。
+  const settingPartition = path.join(os.homedir(), '.ztools', 'Partitions', 'setting')
+  for (const dir of ['Cache', 'Code Cache', 'GPUCache', 'DawnGraphiteCache', 'DawnWebGPUCache']) {
+    fs.rmSync(path.join(settingPartition, dir), { recursive: true, force: true })
+  }
+  console.log('设置插件分区缓存已清理')
+
+  // 9) 重启
   console.log('启动 ZTools ...')
   spawn('D:\\Software_Data\\ZTools\\ZTools.exe', [], { detached: true, stdio: 'ignore' }).unref()
   console.log('部署完成。')
