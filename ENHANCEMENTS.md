@@ -67,3 +67,17 @@ scripts/deploy-build.js
 - 首次安装依赖：`pnpm install`（需先 `git init`，postinstall 会配置 git hooks）。
 - `pnpm-workspace.yaml` 中 electron 等构建脚本设为 false（跳过下载 Electron 二进制）；
   将来要用 electron-builder 打完整安装包（`pnpm build:win`）时把 `electron` 改为 `true`。
+
+## 三、剪贴板「悬浮中转 + 悬浮剪贴板」（clipboard-pin/）
+
+针对市场 clipboard 插件（Zing）的注入式增强，对标 uTools 剪贴板 v4.3.2：
+常驻中转站窗口（内容累积 + collect/<hash> 持久化 + 按住拖出 + 双击复制并粘贴）、
+历史页签（搜索/钉住）、pindata / pinscreen 特征码。详见 `clipboard-pin/README.md`。
+
+> 注意：这部分改的是**已安装的第三方插件**（asar 注入），不在本仓库构建链路内。
+> 向官方贡献的正确路径是向 ZToolsCenter/ZTools-plugins 的 plugins/clipboard
+> 以源码形式提交 PR（规划中，见 docs/PR-draft.md）。
+
+## 向上游发起合并
+
+PR 描述初稿见 `docs/PR-draft.md`；fork：PepinoLatte/ZTools。

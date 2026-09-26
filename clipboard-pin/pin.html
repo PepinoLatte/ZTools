@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>悬浮中转</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      body {
+        font-family: system-ui, 'PingFang SC', 'Microsoft Yahei', sans-serif;
+        padding: 0 6px 6px;
+      }
+      .card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border-radius: 12px;
+        background: rgba(26, 28, 32, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        color: #e8eaed;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        -webkit-app-region: drag;
+        cursor: grab;
+        user-select: none;
+        flex: none;
+      }
+      .header .pin-icon {
+        width: 14px;
+        height: 14px;
+        color: #ffb74d;
+        flex: none;
+      }
+      .tabs {
+        display: flex;
+        gap: 2px;
+        -webkit-app-region: no-drag;
+      }
+      .tab {
+        border: none;
+        background: transparent;
+        color: rgba(232, 234, 237, 0.6);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .tab:hover {
+        color: #e8eaed;
+      }
+      .tab.active {
+        color: #ffb74d;
+        background: rgba(255, 183, 77, 0.12);
+      }
+      .header .spacer {
+        flex: 1;
+      }
+      .hbtn {
+        -webkit-app-region: no-drag;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #e8eaed;
+        border-radius: 6px;
+        padding: 3px 9px;
+        font-size: 11px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+        white-space: nowrap;
+      }
+      .hbtn:hover {
+        background: rgba(255, 255, 255, 0.13);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      .hbtn.close:hover {
+        background: rgba(244, 67, 54, 0.25);
+        border-color: rgba(244, 67, 54, 0.6);
+      }
+      .hbtn svg {
+        width: 12px;
+        height: 12px;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 8px 0;
+        flex: none;
+      }
+      .toolbar .search {
+        flex: 1;
+        min-width: 0;
+        padding: 4px 10px;
+        font-size: 11.5px;
+        color: #e8eaed;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .toolbar .search:focus {
+        border-color: rgba(255, 183, 77, 0.55);
+      }
+      .list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .list::-webkit-scrollbar {
+        width: 6px;
+      }
+      .list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.16);
+        border-radius: 3px;
+      }
+      .item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        overflow: hidden;
+        flex: none;
+      }
+      .item .body {
+        padding: 9px 11px;
+        max-height: 180px;
+        overflow: auto;
+        cursor: default;
+      }
+      .item .body::-webkit-scrollbar {
+        width: 5px;
+      }
+      .item .body::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.14);
+        border-radius: 3px;
+      }
+      .item pre.text {
+        font-family: inherit;
+        font-size: 12.5px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #e8eaed;
+        user-select: text;
+        cursor: text;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 6;
+        overflow: hidden;
+      }
+      .item.expanded pre.text {
+        display: block;
+      }
+      .item img.image {
+        max-width: 100%;
+        max-height: 140px;
+        border-radius: 6px;
+        display: block;
+      }
+      .item .files {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .item .file-row {
+        font-size: 11.5px;
+        padding: 3px 0;
+        user-select: text;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .item .file-row .fname {
+        font-weight: 500;
+      }
+      .item .file-row .fpath {
+        opacity: 0.45;
+        font-size: 11px;
+      }
+      .item .bar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 8px 7px;
+      }
+      .item .meta {
+        font-size: 10px;
+        opacity: 0.4;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .item .hint {
+        font-size: 10px;
+        opacity: 0.35;
+      }
+      .ibtn {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        color: #e8eaed;
+        border-radius: 5px;
+        padding: 2px 8px;
+        font-size: 10.5px;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+        white-space: nowrap;
+      }
+      .ibtn:hover {
+        background: rgba(255, 255, 255, 0.13);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      .ibtn.pin {
+        color: #ffb74d;
+        border-color: rgba(255, 183, 77, 0.4);
+      }
+      .ibtn.pin:hover {
+        background: rgba(255, 183, 77, 0.16);
+        border-color: #ffb74d;
+      }
+      .ibtn.danger:hover {
+        background: rgba(244, 67, 54, 0.22);
+        border-color: rgba(244, 67, 54, 0.55);
+      }
+      .empty {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        opacity: 0.4;
+        font-size: 12px;
+        padding: 20px;
+        text-align: center;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(6px);
+        color: #fff;
+        font-size: 12px;
+        padding: 5px 14px;
+        border-radius: 999px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 99;
+      }
+      .toast.show {
+        opacity: 1;
+      }
+      /* 删除确认弹窗 */
+      .modal-mask {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal {
+        width: 280px;
+        background: #26282d;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+      .modal .m-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .modal .m-text {
+        font-size: 12px;
+        opacity: 0.75;
+        line-height: 1.5;
+        margin-bottom: 10px;
+      }
+      .modal .m-check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        opacity: 0.85;
+        margin-bottom: 12px;
+        cursor: pointer;
+      }
+      .modal .m-btns {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+      .modal .m-btn {
+        padding: 5px 14px;
+        font-size: 12px;
+        color: #e8eaed;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .modal .m-btn:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .modal .m-btn.confirm {
+        color: #fff;
+        background: #ef4444;
+        border-color: transparent;
+      }
+      .modal .m-btn.confirm:hover {
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <svg class="pin-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H18v-2c-1.66 0-3-1.34-3-3z"
+            fill="currentColor"
+          />
+        </svg>
+        <div class="tabs">
+          <button class="tab" id="tab-pin" data-view="pin">中转站</button>
+          <button class="tab" id="tab-hist" data-view="hist">历史</button>
+        </div>
+        <span class="count" id="count"></span>
+        <span class="spacer"></span>
+        <button class="hbtn" id="btn-clear" title="清空全部">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M3 6h18M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2m3 0v14c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2V6h14z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          清空
+        </button>
+        <button class="hbtn close" id="btn-close" title="关闭">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M6 6l12 12M18 6L6 18"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+      <div class="toolbar" id="hist-toolbar" style="display: none">
+        <input class="search" id="hist-search" type="text" placeholder="搜索历史内容…" />
+        <button class="hbtn" id="hist-refresh" title="刷新">刷新</button>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+    <div class="modal-mask" id="confirm-mask" style="display: none">
+      <div class="modal">
+        <div class="m-title" id="confirm-title">确认删除</div>
+        <div class="m-text" id="confirm-text">确定要删除这条中转记录吗？</div>
+        <label class="m-check"
+          ><input type="checkbox" id="confirm-skip" />不再弹出确认（可长按清空按钮恢复）</label
+        >
+        <div class="m-btns">
+          <button class="m-btn" id="confirm-cancel">取消</button>
+          <button class="m-btn confirm" id="confirm-ok">删除</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+      const params = new URLSearchParams(location.search)
+      let view = params.get('way') === 'pinscreen' ? 'hist' : 'pin'
+      let pinItems = [] // 中转站
+      let histItems = [] // 剪贴板历史
+      const CONFIRM_SKIP_KEY = 'zt-pin-confirm-skip'
+
+      const $list = document.getElementById('list')
+      const $count = document.getElementById('count')
+      const $tabPin = document.getElementById('tab-pin')
+      const $tabHist = document.getElementById('tab-hist')
+      const $histToolbar = document.getElementById('hist-toolbar')
+      const $histSearch = document.getElementById('hist-search')
+
+      function showToast(msg) {
+        const t = document.getElementById('toast')
+        t.textContent = msg
+        t.classList.add('show')
+        clearTimeout(t._timer)
+        t._timer = setTimeout(() => t.classList.remove('show'), 1500)
+      }
+
+      function escapeHtml(s) {
+        return String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
+        )
+      }
+
+      function fmtTime(ts) {
+        try {
+          const d = new Date(ts)
+          const z = (n) => String(n).padStart(2, '0')
+          return `${z(d.getHours())}:${z(d.getMinutes())}`
+        } catch {
+          return ''
+        }
+      }
+
+      function imgSrc(v) {
+        if (!v) return ''
+        return /^data:image\//.test(v) ? v : 'file://' + String(v).replace(/^file:\/\//, '')
+      }
+
+      function hashOf(s) {
+        s = String(s)
+        let h = 5381
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0
+        return (h >>> 0).toString(16) + '-' + s.length
+      }
+
+      function confirmSkip() {
+        try {
+          return localStorage.getItem(CONFIRM_SKIP_KEY) === '1'
+        } catch {
+          return false
+        }
+      }
+
+      // 确认弹窗：needSkip=true 时提供"不再弹出"选项
+      function confirmDialog(text, needSkip, onOk) {
+        if (needSkip && confirmSkip()) return onOk()
+        const mask = document.getElementById('confirm-mask')
+        document.getElementById('confirm-text').textContent = text
+        const skip = document.getElementById('confirm-skip')
+        skip.checked = false
+        skip.parentElement.style.display = needSkip ? 'flex' : 'none'
+        mask.style.display = 'flex'
+        const done = (ok) => {
+          mask.style.display = 'none'
+          document.getElementById('confirm-ok').onclick = null
+          document.getElementById('confirm-cancel').onclick = null
+          if (ok && needSkip && skip.checked) {
+            try {
+              localStorage.setItem(CONFIRM_SKIP_KEY, '1')
+            } catch {}
+          }
+          if (ok) onOk()
+        }
+        document.getElementById('confirm-ok').onclick = () => done(true)
+        document.getElementById('confirm-cancel').onclick = () => done(false)
+      }
+
+      // ── 视图切换 ──
+      function setView(v) {
+        view = v
+        $tabPin.classList.toggle('active', v === 'pin')
+        $tabHist.classList.toggle('active', v === 'hist')
+        $histToolbar.style.display = v === 'hist' ? 'flex' : 'none'
+        document.getElementById('btn-clear').style.visibility = v === 'pin' ? 'visible' : 'hidden'
+        if (v === 'hist') loadHistory()
+        else render()
+      }
+
+      $tabPin.addEventListener('click', () => setView('pin'))
+      $tabHist.addEventListener('click', () => setView('hist'))
+      $histSearch.addEventListener('input', () => render())
+      document.getElementById('hist-refresh').addEventListener('click', () => {
+        loadHistory()
+        showToast('已刷新')
+      })
+
+      // ── 渲染 ──
+      function render() {
+        const isPin = view === 'pin'
+        const list = isPin ? pinItems : filteredHist()
+        $count.textContent = list.length ? String(list.length) : ''
+        if (!list.length) {
+          $list.innerHTML =
+            '<div class="empty"><span>' +
+            (isPin
+              ? '中转站是空的<br>选中剪贴板记录点「悬浮中转」钉进来，<br>或切到「历史」里挑内容加入'
+              : histSearchText()
+                ? '没有匹配的历史记录'
+                : '暂无剪贴板历史<br>复制点东西试试') +
+            '</span></div>'
+          return
+        }
+        $list.innerHTML = list
+          .map((it, idx) => {
+            let body = ''
+            if (it.type === 'text') {
+              body =
+                '<pre class="text" title="双击：复制并粘贴到当前窗口">' +
+                escapeHtml(it.value || '') +
+                '</pre>'
+            } else if (it.type === 'image') {
+              body =
+                '<img class="image" loading="lazy" src="' +
+                escapeHtml(imgSrc(it.value)) +
+                '" alt="图片" title="双击：复制并粘贴到当前窗口">'
+            } else if (it.type === 'files') {
+              const fs = Array.isArray(it.value) ? it.value : []
+              body =
+                '<div class="files">' +
+                fs
+                  .map(
+                    (f) =>
+                      '<div class="file-row"><span class="fname">' +
+                      escapeHtml(f.name || '') +
+                      '</span> <span class="fpath">' +
+                      escapeHtml(f.path || '') +
+                      '</span></div>'
+                  )
+                  .join('') +
+                '</div>'
+            }
+            const meta =
+              it.type === 'text'
+                ? '文本 · ' + fmtTime(it.timestamp)
+                : it.type === 'image'
+                  ? '图片' +
+                    (it.size ? ' · ' + Math.round(it.size / 1024) + 'KB' : '') +
+                    ' · ' +
+                    fmtTime(it.timestamp)
+                  : '文件 · ' +
+                    (Array.isArray(it.value) ? it.value.length : 0) +
+                    ' 项 · ' +
+                    fmtTime(it.timestamp)
+            const hint = '双击=复制并粘贴' + (isPin ? ' · 按住拖出' : '')
+            let btns = ''
+            if (isPin) {
+              btns = '<button class="ibtn danger" data-act="del">删除</button>'
+            } else {
+              btns = '<button class="ibtn pin" data-act="add" title="加入中转站">钉住</button>'
+            }
+            return (
+              '<div class="item" data-idx="' +
+              idx +
+              '">' +
+              '<div class="body" data-act="expand" title="双击：复制并粘贴到当前窗口">' +
+              body +
+              '</div>' +
+              '<div class="bar"><span class="meta">' +
+              meta +
+              '</span><span class="hint">' +
+              hint +
+              '</span>' +
+              btns +
+              '</div></div>'
+            )
+          })
+          .join('')
+      }
+
+      function histSearchText() {
+        return ($histSearch.value || '').trim().toLowerCase()
+      }
+      function filteredHist() {
+        const q = histSearchText()
+        if (!q) return histItems
+        return histItems.filter((it) => {
+          if (it.type === 'text')
+            return String(it.value || '')
+              .toLowerCase()
+              .includes(q)
+          if (it.type === 'files')
+            return (it.value || []).some((f) =>
+              String(f.name || f.path || '')
+                .toLowerCase()
+                .includes(q)
+            )
+          return false
+        })
+      }
+
+      // ── 复制并粘贴到当前聚焦窗口（双击）──
+      function buildPayload(it) {
+        if (it.type === 'text') return { type: 'text', content: it.value || '' }
+        if (it.type === 'image') {
+          const v = it.value || ''
+          if (/^data:image\//.test(v)) return { __rawImage: v }
+          return { type: 'image', content: String(v).replace(/^file:\/\//, '') }
+        }
+        if (it.type === 'files')
+          return { type: 'file', content: (it.value || []).map((f) => f.path).filter(Boolean) }
+        return null
+      }
+
+      async function copyPasteItem(it) {
+        const z = window.ztools
+        try {
+          if (it.id) {
+            // 剪贴板历史记录：直接写入并粘贴
+            await z.clipboard.write(it.id, true)
+            showToast('已复制并粘贴')
+            return
+          }
+          const payload = buildPayload(it)
+          if (!payload) return showToast('无法处理该内容')
+          if (payload.__rawImage) {
+            z.copyImage(payload.__rawImage)
+            // 图片已进剪贴板；粘贴交给用户 Ctrl+V（无文件路径时无法模拟粘贴）
+            showToast('图片已复制，Ctrl+V 粘贴')
+            return
+          }
+          await z.clipboard.writeContent(payload, true)
+          showToast('已复制并粘贴')
+        } catch (e) {
+          console.error('[zt-pin] copyPaste failed:', e)
+          showToast('操作失败')
+        }
+      }
+
+      // ── 拖出：按住内容拖动即触发（对标 uTools 拖拽手势）──
+      let dragState = null
+      $list.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return
+        if (e.target.closest('button') || e.target.closest('input')) return
+        const card = e.target.closest('.item')
+        if (!card || view !== 'pin') return // 拖出仅中转站内容有意义
+        dragState = { idx: Number(card.dataset.idx), x: e.screenX, y: e.screenY, done: false }
+      })
+      $list.addEventListener('mousemove', (e) => {
+        if (!dragState || dragState.done) return
+        const dist = Math.abs(e.screenX - dragState.x) + Math.abs(e.screenY - dragState.y)
+        if (dist < 10) return
+        dragState.done = true
+        const it = pinItems[dragState.idx]
+        if (!it) return
+        try {
+          const files = window.__pinBridge.toDragFiles([it])
+          if (!files.length) return showToast('该内容无法拖出')
+          window.ztools.startDrag(files)
+        } catch (err) {
+          console.error('[zt-pin] drag failed:', err)
+        }
+      })
+      document.addEventListener('mouseup', () => {
+        dragState = null
+      })
+
+      async function delItem(it) {
+        confirmDialog('确定要删除这条中转记录吗？', true, async () => {
+          try {
+            await window.ztools.db.promises.remove('collect/' + it.hash)
+          } catch {}
+          pinItems = pinItems.filter((x) => x.hash !== it.hash)
+          render()
+          showToast('已删除')
+        })
+      }
+
+      async function clearAll() {
+        for (const it of pinItems) {
+          try {
+            await window.ztools.db.promises.remove('collect/' + it.hash)
+          } catch {}
+        }
+        pinItems = []
+        render()
+        showToast('已清空')
+      }
+
+      // ── 加入中转站（历史 -> 钉住）──
+      async function addToPin(it) {
+        const rec = {
+          type: it.type,
+          value: it.value,
+          timestamp: Date.now(),
+          hash: it.hash,
+          size: it.size
+        }
+        await upsertCollect([rec])
+        showToast('已加入中转站')
+      }
+
+      // 点击/双击分发
+      $list.addEventListener('click', (e) => {
+        const card = e.target.closest('.item')
+        if (!card) return
+        const act = e.target.closest('[data-act]')
+        const list = view === 'pin' ? pinItems : filteredHist()
+        const it = list[Number(card.dataset.idx)]
+        if (!it) return
+        if (act) {
+          const a = act.dataset.act
+          if (a === 'add') return addToPin(it)
+          if (a === 'del') return delItem(it)
+          if (a === 'expand') {
+            const pre = card.querySelector('pre.text')
+            if (pre) pre.parentElement.classList.toggle('expanded')
+            return
+          }
+          return // 复制/粘贴统一走双击
+        }
+        if (view === 'hist') {
+          // 历史视图单击展开长文本
+          const pre = card.querySelector('pre.text')
+          if (pre) pre.parentElement.classList.toggle('expanded')
+        }
+      })
+      $list.addEventListener('dblclick', (e) => {
+        const card = e.target.closest('.item')
+        if (!card) return
+        if (e.target.closest('button')) return
+        const list = view === 'pin' ? pinItems : filteredHist()
+        const it = list[Number(card.dataset.idx)]
+        if (!it) return
+        copyPasteItem(it)
+      })
+
+      // ── 中转站数据（collect/<hash>，对标 uTools collectPutDB）──
+      async function upsertCollect(records) {
+        const fresh = []
+        for (const rec of records || []) {
+          if (!rec || !rec.hash) continue
+          try {
+            const id = 'collect/' + rec.hash
+            const exist = await window.ztools.db.promises.get(id)
+            if (exist && exist._id) {
+              const doc = { ...exist, timestamp: Date.now() }
+              const r = await window.ztools.db.promises.put(doc)
+              if (r && r.ok !== false && r.rev) doc._rev = r.rev
+              fresh.unshift(doc)
+            } else {
+              const doc = {
+                _id: id,
+                type: rec.type,
+                value: rec.value,
+                timestamp: rec.timestamp || Date.now(),
+                hash: rec.hash
+              }
+              if (rec.size) doc.size = rec.size
+              const r = await window.ztools.db.promises.put(doc)
+              if (r && r.rev) doc._rev = r.rev
+              fresh.unshift(doc)
+            }
+          } catch (err) {
+            console.error('[zt-pin] collect failed:', err)
+          }
+        }
+        if (fresh.length) {
+          pinItems = [...fresh.filter((f) => !pinItems.some((x) => x.hash === f.hash)), ...pinItems]
+          if (view === 'pin') render()
+        }
+      }
+
+      async function loadCollect() {
+        try {
+          const docs = await window.ztools.db.promises.allDocs('collect/')
+          const arr = Array.isArray(docs) ? docs : (docs && docs.rows) || []
+          pinItems = arr
+            .map((d) => ({
+              type: d.type,
+              value: d.value,
+              timestamp: d.timestamp || 0,
+              hash: d.hash || String(d._id || '').slice(8),
+              size: d.size
+            }))
+            .sort((a, b) => b.timestamp - a.timestamp)
+        } catch (e) {
+          console.error('[zt-pin] loadCollect failed:', e)
+        }
+        if (view === 'pin') render()
+      }
+
+      // ── 历史（实时剪贴板记录）──
+      async function loadHistory() {
+        try {
+          const res = await window.ztools.clipboard.getHistory(1, 100)
+          const arr = Array.isArray(res)
+            ? res
+            : (res && (res.items || res.list || res.records)) || []
+          histItems = arr.map((r) => ({
+            id: r.id,
+            type: r.type,
+            value:
+              r.type === 'image'
+                ? r.imagePath || r.image || r.content || ''
+                : r.content || r.text || r.preview || '',
+            files: r.files,
+            timestamp: r.timestamp || 0,
+            hash: hashOf(
+              r.type +
+                '|' +
+                (r.type === 'image' ? r.imagePath || r.image || '' : r.content || r.text || '')
+            )
+          }))
+          if (view === 'hist') render()
+        } catch (e) {
+          console.error('[zt-pin] loadHistory failed:', e)
+        }
+      }
+
+      // 接收父窗口钉住的新内容
+      if (window.__pinBridge) {
+        window.__pinBridge.onData(async (records) => {
+          await upsertCollect(records)
+          setView('pin')
+          showToast('已钉住 ' + (records || []).length + ' 条内容')
+        })
+      }
+
+      document.getElementById('btn-close').addEventListener('click', () => window.close())
+      document.getElementById('btn-clear').addEventListener('click', () => {
+        if (view !== 'pin') return
+        if (!pinItems.length) return showToast('中转站是空的')
+        confirmDialog('确定要清空中转站的全部内容吗？', true, async () => {
+          for (const it of pinItems) {
+            try {
+              await window.ztools.db.promises.remove('collect/' + it.hash)
+            } catch {}
+          }
+          pinItems = []
+          render()
+          showToast('已清空')
+        })
+      })
+
+      // 初始视图
+      setView(view)
+      loadCollect()
+      loadHistory()
+      setInterval(() => {
+        if (view === 'hist') loadHistory()
+      }, 3000)
+    </script>
+  </body>
+</html>
